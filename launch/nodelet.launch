@@ -1,0 +1,48 @@
+<launch>
+  <arg name="manager_name" default="ximea_nodelet_manager" />
+  <arg name="camera" default="cam0" />
+  <arg name="settings" default="$(find ximea_camera)/config/ximea_mq022.yaml"/>
+
+
+  <group ns="$(arg camera)">
+
+    <!-- nodelet manager -->
+    <node pkg="nodelet" type="nodelet" name="$(arg manager_name)" args="manager" output="screen">
+    </node>
+
+    <!-- camera driver -->
+    <node pkg="nodelet" type="nodelet" name="ximea_nodelet" args="load ximea_camera/RosNodelet $(arg manager_name)">
+      <param name="settings_yaml" type="string" value="$(arg settings)" />
+      <param name="aeag" type="bool" value="1" />
+      <param name="width" type="int" value="2040" />
+      <param name="height" type="int" value="1020" />
+      <param name="acq_timing_mode" type="int" value="1" />
+      <param name="framerate" type="double" value="30.0" />
+    </node>
+
+    <!-- Debayer and publish monochrome and color topics -->
+    <node pkg="nodelet" type="nodelet" name="debayer" args="load image_proc/debayer $(arg manager_name)">
+    </node>
+
+    <!-- Crop and decimate -->
+    <node pkg="nodelet" type="nodelet" name="crop_decimate" args="load image_proc/crop_decimate $(arg manager_name)">
+      <!-- remap input topics -->
+      <remap from="camera/image_raw" to="image_color"/>
+      <remap from="camera/image_info" to="camera_info"/>
+      <!-- remap output topics -->
+      <remap from="camera_out/image_raw" to="image_color_subsampled"/>
+      <remap from="camera_out/image_info" to="camera_info_subsampled"/>
+      <!-- settings -->
+      <param name="decimation_x" type="int" value="4" />
+      <param name="decimation_y" type="int" value="4" />
+    </node>
+
+    <!-- saliency -->
+    <node pkg="nodelet" type="nodelet" name="nmpt_saliency_nodelet" args="load nmpt_saliency/Nodelet $(arg manager_name)">
+      <remap from="image_color" to="image_color_subsampled"/>
+    </node>
+
+  </group>
+
+</launch>
+

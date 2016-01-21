@@ -1,0 +1,10 @@
+<library path="lib/libnmpt_saliency_nodelet">
+  <class name="nmpt_saliency/Nodelet"
+         type="nmpt_saliency::Nodelet"
+         base_class_type="nodelet::Nodelet">
+    <description> 
+      nmpt based saliency
+    </description>
+  </class>
+</library>
+

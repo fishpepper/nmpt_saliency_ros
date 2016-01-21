@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<package>
+  <version>1.0.0</version>
+  <name>nmpt_saliency_ros</name>
+  <description>nmpt saliency for ross</description>
+  <author>Florian Lier, Simon Schulz</author>
+  <maintainer email="sschult@techfak.uni-bielefeld.de">Simon Schulz</maintainer>
+  <license>LGPLv3</license>
+
+  <url type="website">http://www.github.com/fishpepper/nmpt_saliency_ros</url>
+  <url type="repository">https://github.com/fishpepper/nmpt_saliency_ros</url>
+
+  <!-- The *_depend tags are used to specify dependencies -->
+  <!-- Dependencies can be catkin packages or system dependencies -->
+  <!-- Examples: -->
+  <!-- Use build_depend for packages you need at compile time: -->
+  <!--   <build_depend>message_generation</build_depend> -->
+  <!-- Use buildtool_depend for build tool packages: -->
+  <!--   <buildtool_depend>catkin</buildtool_depend> -->
+  <!-- Use run_depend for packages you need at runtime: -->
+  <!--   <run_depend>message_runtime</run_depend> -->
+  <!-- Use test_depend for packages you need only for testing: -->
+  <!--   <test_depend>gtest</test_depend> -->
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roscpp</build_depend>
+  <run_depend>roscpp</run_depend>
+
+  <build_depend>image_transport</build_depend>
+  <run_depend>image_transport</run_depend>
+
+  <build_depend>sensor_msgs</build_depend>
+  <run_depend>sensor_msgs</run_depend>
+
+  <build_depend>camera_info_manager</build_depend>
+  <run_depend>camera_info_manager</run_depend>
+
+  <build_depend>roslint</build_depend>
+
+  <build_depend>nodelet</build_depend>
+  <run_depend>nodelet</run_depend>
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <nodelet plugin="${prefix}/nodelet.xml" />
+  </export>
+</package>
