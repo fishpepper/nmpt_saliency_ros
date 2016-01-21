@@ -20,7 +20,8 @@ All rights reserved.
 using nmpt_saliency::Nodelet;
 using std::vector;
 
-Nodelet::Nodelet() : running_(false), lqrpt(2, 0.5), salientSpot(2, 1.0, 0, .015) {
+Nodelet::Nodelet() : running_(false), lqrpt(2, 0.5) {
+    salient_spot_ptr_ = boost::shared_ptr<LQRPointTracker>(new LQRPointTracker(2, 1.0, 0, .015));
     // nothing to do
     NODELET_INFO("Nodelet initialized");
 }
@@ -59,10 +60,11 @@ void Nodelet::imageCallback(const sensor_msgs::ImageConstPtr& image,
     lqrpt[0] = maxloc.x * 1.0 / saliency_image.cols;
     lqrpt[1] = maxloc.y * 1.0 / saliency_image.rows;
 
-    salientSpot.setTrackerTarget(lqrpt);
-
-    salientSpot.updateTrackerPosition();
-    lqrpt = salientSpot.getCurrentPosition();
+    boost::interprocess::scoped_lock<boost::mutex> lock(salient_spot_mutex_);
+    salient_spot_ptr_->setTrackerTarget(lqrpt);
+    salient_spot_ptr_->updateTrackerPosition();
+    lqrpt = salient_spot_ptr_->getCurrentPosition();
+    lock.unlock();
 
     // publish salient point
     geometry_msgs::PointStamped ps;
@@ -194,46 +196,24 @@ void Nodelet::onInit() {
 
     // attach to dyn reconfig server:
     NODELET_INFO("connecting to dynamic reconfiguration server");
-    ros::NodeHandle reconf_node(priv_nh, "parameters");
-    reconfig_server_ = new dynamic_reconfigure::Server<nnmpt_saliency::nmpt_saliency>(reconf_node);
-    reconfig_server_->setCallback(boost::bind(&Nodelet::dynamicReconfigureCallback, this, _1, _2))
+    ros::NodeHandle reconf_node(priv_nh, "/saliency/parameters");
+    reconfig_server_ =
+            new dynamic_reconfigure::Server<nmpt_saliency::nmpt_saliencyConfig>(reconf_node);
+    reconfig_server_->setCallback(boost::bind(&Nodelet::dynamicReconfigureCallback, this, _1, _2));
 
     running_ = true;
 }
 
 
-void Nodelet::dynamicReconfigureCallback(const nmpt_saliency::Nodeletnmp xiAPIConfig &config,
+void Nodelet::dynamicReconfigureCallback(const nmpt_saliency::nmpt_saliencyConfig &config,
                                                     uint32_t level) {
-    // ignore incoming requests as long cam is not set up properly
-    if (!hasValidHandle()) {
-        return;
-    }
+    boost::interprocess::scoped_lock<boost::mutex> lock(salient_spot_mutex_);
+    salient_spot_ptr_.reset(new LQRPointTracker(
+                                2,
+                                config.dt,
+                                config.drag,
+                                config.move_cost));
 
-    // use some tricks to iterate through all config entries:
-    std::vector<ximea_camera::xiAPIConfig::AbstractParamDescriptionConstPtr>::const_iterator _i;
-    for (_i = config.__getParamDescriptions__().begin();
-         _i != config.__getParamDescriptions__().end(); ++_i) {
-        boost::any val;
-        boost::shared_ptr<const ximea_camera::xiAPIConfig::AbstractParamDescription>
-                description = *_i;
-
-        // fetch actual value:
-        description->getValue(config, val);
-
-        //  std::cout << description->name << " " << description->type << "\n";
-
-        // copy data to ximea api:
-        if (description->type == "double") {
-            dynamicReconfigureFloat(description->name.c_str(),
-                                      static_cast<float>(boost::any_cast<double>(val)));
-        } else if (description->type == "bool") {
-            dynamicReconfigureInt(description->name.c_str(), (boost::any_cast<bool>(val))?1:0);
-        } else if (description->type == "int") {
-            dynamicReconfigureInt(description->name.c_str(), boost::any_cast<int>(val));
-        } else {
-            std::cerr << "ERROR: unsupported config type " << description->type  << "\n";
-        }
-    }
 }
 
 // Register this plugin with pluginlib.  Names must match nodelet_velodyne.xml.

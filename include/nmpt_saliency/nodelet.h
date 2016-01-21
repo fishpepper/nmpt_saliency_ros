@@ -9,7 +9,9 @@ Copyright 2016  Simon Schulz (University of Bielefeld)
 #define INCLUDE_NMPT_SALIENCY_NODELET_H_
 #include <signal.h>
 
+#include <boost/interprocess/sync/scoped_lock.hpp>
 #include <boost/thread.hpp>
+#include <dynamic_reconfigure/server.h>
 #include <image_transport/image_transport.h>
 #include <nmpt/BlockTimer.h>
 #include <nmpt/FastSalience.h>
@@ -33,6 +35,8 @@ class Nodelet : public nodelet::Nodelet{
     void publishSalientPointsImage(const cv::Mat &saliency_image, ros::Time timestamp);
     virtual void onInit();
     void imageCallback(const sensor_msgs::ImageConstPtr&, const sensor_msgs::CameraInfoConstPtr&);
+    void dynamicReconfigureCallback(const nmpt_saliency::nmpt_saliencyConfig &config,
+                                    uint32_t level);
     void connectCb();
     FastSalience salTracker;
 
@@ -46,7 +50,8 @@ class Nodelet : public nodelet::Nodelet{
     ros::Publisher salient_spot_publisher_;
 
     std::vector<double> lqrpt;
-    LQRPointTracker salientSpot;
+    boost::mutex salient_spot_mutex_;
+    boost::shared_ptr<LQRPointTracker> salient_spot_ptr_;
     std::vector<cv::KeyPoint> keypoints_;
 };
 
