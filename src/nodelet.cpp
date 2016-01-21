@@ -192,7 +192,48 @@ void Nodelet::onInit() {
             node.advertise<geometry_msgs::PointStamped>("/saliency/spot", 10,
                                                         connect_cb, connect_cb);
 
+    // attach to dyn reconfig server:
+    NODELET_INFO("connecting to dynamic reconfiguration server");
+    ros::NodeHandle reconf_node(priv_nh, "parameters");
+    reconfig_server_ = new dynamic_reconfigure::Server<nnmpt_saliency::nmpt_saliency>(reconf_node);
+    reconfig_server_->setCallback(boost::bind(&Nodelet::dynamicReconfigureCallback, this, _1, _2))
+
     running_ = true;
+}
+
+
+void Nodelet::dynamicReconfigureCallback(const nmpt_saliency::Nodeletnmp xiAPIConfig &config,
+                                                    uint32_t level) {
+    // ignore incoming requests as long cam is not set up properly
+    if (!hasValidHandle()) {
+        return;
+    }
+
+    // use some tricks to iterate through all config entries:
+    std::vector<ximea_camera::xiAPIConfig::AbstractParamDescriptionConstPtr>::const_iterator _i;
+    for (_i = config.__getParamDescriptions__().begin();
+         _i != config.__getParamDescriptions__().end(); ++_i) {
+        boost::any val;
+        boost::shared_ptr<const ximea_camera::xiAPIConfig::AbstractParamDescription>
+                description = *_i;
+
+        // fetch actual value:
+        description->getValue(config, val);
+
+        //  std::cout << description->name << " " << description->type << "\n";
+
+        // copy data to ximea api:
+        if (description->type == "double") {
+            dynamicReconfigureFloat(description->name.c_str(),
+                                      static_cast<float>(boost::any_cast<double>(val)));
+        } else if (description->type == "bool") {
+            dynamicReconfigureInt(description->name.c_str(), (boost::any_cast<bool>(val))?1:0);
+        } else if (description->type == "int") {
+            dynamicReconfigureInt(description->name.c_str(), boost::any_cast<int>(val));
+        } else {
+            std::cerr << "ERROR: unsupported config type " << description->type  << "\n";
+        }
+    }
 }
 
 // Register this plugin with pluginlib.  Names must match nodelet_velodyne.xml.

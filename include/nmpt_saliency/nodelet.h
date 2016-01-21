@@ -19,6 +19,8 @@ Copyright 2016  Simon Schulz (University of Bielefeld)
 #include <ros/ros.h>
 #include <vector>
 
+#include "nmpt_saliency/nmpt_saliencyConfig.h"
+
 namespace nmpt_saliency {
 
 class Nodelet : public nodelet::Nodelet{
@@ -36,6 +38,7 @@ class Nodelet : public nodelet::Nodelet{
 
     volatile bool running_;
     boost::mutex connect_mutex_;
+    dynamic_reconfigure::Server<nmpt_saliency::nmpt_saliencyConfig> *reconfig_server_;
     image_transport::ImageTransport *image_transport_;
     image_transport::CameraSubscriber image_subscriber_;
     image_transport::Publisher saliency_image_publisher_;

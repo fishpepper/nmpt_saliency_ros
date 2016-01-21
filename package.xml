@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
   <version>1.0.0</version>
-  <name>nmpt_saliency_ros</name>
-  <description>nmpt saliency for ross</description>
+  <name>nmpt_saliency</name>
+  <description>nmpt saliency for ros</description>
   <author>Florian Lier, Simon Schulz</author>
   <maintainer email="sschult@techfak.uni-bielefeld.de">Simon Schulz</maintainer>
   <license>LGPLv3</license>
