@@ -22,8 +22,8 @@ using std::vector;
 
 Nodelet::Nodelet() : running_(false), lqrpt(2, 0.5) {
     salient_spot_ptr_ = boost::shared_ptr<LQRPointTracker>(new LQRPointTracker(2, 1.0, 0, .015));
-    // nothing to do
-    NODELET_INFO("nmpt_saliency: Nodelet initialized");
+    color_saliency_image_ = false;
+    image_transport_ = NULL;
 }
 
 Nodelet::~Nodelet() {
@@ -126,7 +126,7 @@ void Nodelet::publishSaliencyImage(const cv::Mat &saliency_image, ros::Time time
     float scale = 255 / (max-min);
 
     std::string encoding;
-    if (0) {
+    if (color_saliency_image_) {
         // nice colored image
         // first map to grayscale
         saliency_image.convertTo(tmp, CV_8UC1, scale, -min*scale);
@@ -154,11 +154,12 @@ void Nodelet::connectCb() {
             (salient_spot_image_publisher_.getNumSubscribers() == 0) &&
             (salient_spot_publisher_.getNumSubscribers() == 0)
             ) {
-        NODELET_INFO("nmpt_saliency: no more subscribers on saliency topics, shutting down "
-                     "image subscriber");
+        NODELET_DEBUG("nmpt_saliency: no more subscribers on saliency topics, shutting down "
+                      "image subscriber");
         image_subscriber_.shutdown();
     } else if (!image_subscriber_) {
-        NODELET_INFO("nmpt_saliency: new subscriber on saliency topic, subscribing to image topic");
+        NODELET_DEBUG("nmpt_saliency: new subscriber on saliency topic, "
+                      "subscribing to image topic");
         image_transport::TransportHints hints("raw", ros::TransportHints(), getPrivateNodeHandle());
         image_subscriber_ = image_transport_->subscribeCamera(
                     "image_color", 1, boost::bind(&Nodelet::imageCallback, this, _1, _2));
@@ -166,12 +167,12 @@ void Nodelet::connectCb() {
 }
 
 void Nodelet::onInit() {
-    NODELET_INFO("nmpt_saliency: Nodelet::onInit()");
+    NODELET_DEBUG("nmpt_saliency: Nodelet::onInit()");
 
     ros::NodeHandle priv_nh(getPrivateNodeHandle());
     ros::NodeHandle node(getNodeHandle());
 
-    image_transport_ = new image_transport::ImageTransport(priv_nh);
+    image_transport_ = new image_transport::ImageTransport(node);
 
 
     // Monitor whether anyone is subscribed to the output
@@ -183,20 +184,31 @@ void Nodelet::onInit() {
 
     // Make sure we don't enter connectCb() between advertising and assigning to pub_
     boost::lock_guard<boost::mutex> lock(connect_mutex_);
-    saliency_image_publisher_ =
+
+    // this is just a debug image, therefore we publish it as a ros Publisher
+    // instead of using image_transport advertise...
+    // image_transport_->advertise("image_saliency", 1, ...)
+    /*saliency_image_publisher_ =
             image_transport_->advertise("image_saliency", 1,
                                         imagetransport_connect_cb, imagetransport_connect_cb);
 
     salient_spot_image_publisher_ =
             image_transport_->advertise("image_salient_spots", 1,
                                         imagetransport_connect_cb, imagetransport_connect_cb);
+    */
+
+    saliency_image_publisher_ = node.advertise<sensor_msgs::Image>("image_saliency", 1,
+                                                                    connect_cb, connect_cb);
+
+    salient_spot_image_publisher_ = node.advertise<sensor_msgs::Image>("image_salient_spots", 1,
+                                                                    connect_cb, connect_cb);
 
     salient_spot_publisher_ =
-            priv_nh.advertise<geometry_msgs::PointStamped>("salient_spot", 10,
+            node.advertise<geometry_msgs::PointStamped>("salient_spot", 10,
                                                         connect_cb, connect_cb);
 
     // attach to dyn reconfig server:
-    NODELET_INFO("nmpt_saliency: connecting to dynamic reconfiguration server");
+    NODELET_DEBUG("nmpt_saliency: connecting to dynamic reconfiguration server");
     ros::NodeHandle reconf_node(priv_nh, "parameters");
     reconfig_server_ =
             new dynamic_reconfigure::Server<nmpt_saliency::nmpt_saliencyConfig>(reconf_node);
@@ -208,13 +220,16 @@ void Nodelet::onInit() {
 
 void Nodelet::dynamicReconfigureCallback(const nmpt_saliency::nmpt_saliencyConfig &config,
                                                     uint32_t level) {
+    // copy settings
+    color_saliency_image_ = config.color_saliency_image;
+
+    // lock salient spot mutex & update config
     boost::interprocess::scoped_lock<boost::mutex> lock(salient_spot_mutex_);
     salient_spot_ptr_.reset(new LQRPointTracker(
                                 2,
                                 config.dt,
                                 config.drag,
                                 config.move_cost));
-
 }
 
 // Register this plugin with pluginlib.  Names must match nodelet_velodyne.xml.

@@ -5,6 +5,9 @@ project(nmpt_saliency)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 
+#compile optimized, non optimized will result in very low fps...
+SET(CMAKE_CXX_FLAGS "-Wall  -O2 -g -march=native" )
+
 #use PkgConfig
 find_package(PkgConfig REQUIRED)
 

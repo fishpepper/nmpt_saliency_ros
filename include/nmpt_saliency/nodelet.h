@@ -45,14 +45,17 @@ class Nodelet : public nodelet::Nodelet{
     dynamic_reconfigure::Server<nmpt_saliency::nmpt_saliencyConfig> *reconfig_server_;
     image_transport::ImageTransport *image_transport_;
     image_transport::CameraSubscriber image_subscriber_;
-    image_transport::Publisher saliency_image_publisher_;
-    image_transport::Publisher salient_spot_image_publisher_;
+    // image_transport::Publisher saliency_image_publisher_;
+    // image_transport::Publisher salient_spot_image_publisher_;
+    ros::Publisher saliency_image_publisher_;
+    ros::Publisher salient_spot_image_publisher_;
     ros::Publisher salient_spot_publisher_;
 
     std::vector<double> lqrpt;
     boost::mutex salient_spot_mutex_;
     boost::shared_ptr<LQRPointTracker> salient_spot_ptr_;
     std::vector<cv::KeyPoint> keypoints_;
+    bool color_saliency_image_;
 };
 
 }  // namespace nmpt_saliency
