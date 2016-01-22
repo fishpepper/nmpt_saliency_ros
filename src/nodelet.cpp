@@ -23,7 +23,7 @@ using std::vector;
 Nodelet::Nodelet() : running_(false), lqrpt(2, 0.5) {
     salient_spot_ptr_ = boost::shared_ptr<LQRPointTracker>(new LQRPointTracker(2, 1.0, 0, .015));
     // nothing to do
-    NODELET_INFO("Nodelet initialized");
+    NODELET_INFO("nmpt_saliency: Nodelet initialized");
 }
 
 Nodelet::~Nodelet() {
@@ -39,8 +39,8 @@ void Nodelet::imageCallback(const sensor_msgs::ImageConstPtr& image,
     cv_bridge::CvImageConstPtr cv_image = cv_bridge::toCvShare(image);
 
     if (image->width >= 640) {
-        NODELET_DEBUG_ONCE("WARNING: nmpt saliency - do not use huge images as input, " \
-                           "use crop_decimate to input smaller images into this nodelet.");
+        NODELET_DEBUG_ONCE("nmpt_saliency:  WARNING: nmpt saliency - do not use huge images as "
+                           "input, use crop_decimate to input smaller images into this nodelet.");
     }
 
     keypoints_.clear();
@@ -154,10 +154,11 @@ void Nodelet::connectCb() {
             (salient_spot_image_publisher_.getNumSubscribers() == 0) &&
             (salient_spot_publisher_.getNumSubscribers() == 0)
             ) {
-        NODELET_INFO("no more subscribers on saliency topics, shutting down image subscriber");
+        NODELET_INFO("nmpt_saliency: no more subscribers on saliency topics, shutting down "
+                     "image subscriber");
         image_subscriber_.shutdown();
     } else if (!image_subscriber_) {
-        NODELET_INFO("new subscriber on saliency topic, subscribing to image topic");
+        NODELET_INFO("nmpt_saliency: new subscriber on saliency topic, subscribing to image topic");
         image_transport::TransportHints hints("raw", ros::TransportHints(), getPrivateNodeHandle());
         image_subscriber_ = image_transport_->subscribeCamera(
                     "image_color", 1, boost::bind(&Nodelet::imageCallback, this, _1, _2));
@@ -165,7 +166,7 @@ void Nodelet::connectCb() {
 }
 
 void Nodelet::onInit() {
-    NODELET_INFO("Nodelet::onInit()\n");
+    NODELET_INFO("nmpt_saliency: Nodelet::onInit()");
 
     ros::NodeHandle priv_nh(getPrivateNodeHandle());
     ros::NodeHandle node(getNodeHandle());
@@ -195,7 +196,7 @@ void Nodelet::onInit() {
                                                         connect_cb, connect_cb);
 
     // attach to dyn reconfig server:
-    NODELET_INFO("connecting to dynamic reconfiguration server");
+    NODELET_INFO("nmpt_saliency: connecting to dynamic reconfiguration server");
     ros::NodeHandle reconf_node(priv_nh, "/saliency/parameters");
     reconfig_server_ =
             new dynamic_reconfigure::Server<nmpt_saliency::nmpt_saliencyConfig>(reconf_node);
