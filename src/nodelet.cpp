@@ -171,7 +171,7 @@ void Nodelet::onInit() {
     ros::NodeHandle priv_nh(getPrivateNodeHandle());
     ros::NodeHandle node(getNodeHandle());
 
-    image_transport_ = new image_transport::ImageTransport(node);
+    image_transport_ = new image_transport::ImageTransport(priv_nh);
 
 
     // Monitor whether anyone is subscribed to the output
@@ -184,20 +184,20 @@ void Nodelet::onInit() {
     // Make sure we don't enter connectCb() between advertising and assigning to pub_
     boost::lock_guard<boost::mutex> lock(connect_mutex_);
     saliency_image_publisher_ =
-            image_transport_->advertise("/saliency/image_saliency", 1,
+            image_transport_->advertise("image_saliency", 1,
                                         imagetransport_connect_cb, imagetransport_connect_cb);
 
     salient_spot_image_publisher_ =
-            image_transport_->advertise("/saliency/image_salient_spots", 1,
+            image_transport_->advertise("image_salient_spots", 1,
                                         imagetransport_connect_cb, imagetransport_connect_cb);
 
     salient_spot_publisher_ =
-            node.advertise<geometry_msgs::PointStamped>("/saliency/spot", 10,
+            priv_nh.advertise<geometry_msgs::PointStamped>("salient_spot", 10,
                                                         connect_cb, connect_cb);
 
     // attach to dyn reconfig server:
     NODELET_INFO("nmpt_saliency: connecting to dynamic reconfiguration server");
-    ros::NodeHandle reconf_node(priv_nh, "/saliency/parameters");
+    ros::NodeHandle reconf_node(priv_nh, "parameters");
     reconfig_server_ =
             new dynamic_reconfigure::Server<nmpt_saliency::nmpt_saliencyConfig>(reconf_node);
     reconfig_server_->setCallback(boost::bind(&Nodelet::dynamicReconfigureCallback, this, _1, _2));
